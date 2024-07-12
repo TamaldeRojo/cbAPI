@@ -4,8 +4,8 @@ from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from modules.ChatBox import ChatBox
 from bson import ObjectId
-from database.models.settings import Additional_info, SettingsSchema, DocumentDetails 
-from database.database import count_question, get_settings_from_db, post_settings_to_db, update_settings_in_db, set_additional_info, get_additional_info
+from database.models.settings import Additional_info, Setting 
+from database.database import count_question, get_settings_from_db, post_settings_to_db, trucate_settings_from_db, update_settings_in_db, set_additional_info, get_additional_info
 
 html = """
 <!-- index.html -->
@@ -75,18 +75,23 @@ async def get_settings():
     return settings
 
 @app.post('/settings')
-async def post_settings(settings: SettingsSchema):
+async def post_settings(settings: Setting):
     settings_json = settings.json()
     print(f"{settings_json}")  
     #trucates collection
     new_settings = await post_settings_to_db(settings_json)
     return new_settings
 
+@app.get('/trucate_settings')
+async def trucate_settings():
+    settings = await trucate_settings_from_db()
+    return settings
+
 @app.put('/settings')
-async def update_settings(settings: SettingsSchema):
-    settings_json = settings.json()
-    print(f"{settings_json}")
-    updated_settings = await update_settings_in_db(settings_json)
+async def update_settings(settings: Setting):
+    dict_settings = settings.dict()
+
+    updated_settings = await update_settings_in_db(dict_settings)
     return updated_settings
 
 @app.post('/additional_info')
@@ -116,9 +121,9 @@ async def askQuestion(question: str):
 async def chatbox_endpoint(websocket: WebSocket):
     await websocket.accept()
     while True:
+        chatbox = await ChatBox.start()
         data = await websocket.receive_text()
 
-        chatbox = await ChatBox.start()
         await websocket.send_text(f"[You] {data}")
         res =  await chatbox.askQuestion(data)
         if res:

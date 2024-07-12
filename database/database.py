@@ -1,5 +1,8 @@
+from datetime import date
 import json
+import time
 from bson import ObjectId
+from fastapi import HTTPException
 from database.conn import database
 
 
@@ -17,51 +20,66 @@ async def set_additional_info(additional_info: json):
 
 async def get_settings_from_db() -> dict:
     settings_cursor = database.settings.find()
-    settings = await settings_cursor.to_list(1) 
+    settings = await settings_cursor.to_list(1000) 
     for setting in settings:
         setting['_id'] = str(setting['_id'])
     return settings
 
-async def post_settings_to_db(settings_json: json) -> dict:
-
+async def trucate_settings_from_db() -> dict:
     await database.settings.delete_many({})
-    #inserts the new settings
-    await database.settings.insert_one(json.loads(settings_json))
+    settings = await get_settings_from_db()
+    return settings
 
+
+async def post_settings_to_db(settings_json: json) -> dict:
+    await database.settings.insert_one(json.loads(settings_json))
     return await get_settings_from_db()
 
-async def update_settings_in_db(settings_json:json):
-
-    settings_cursor = database.settings.find()
-    current_settings = await settings_cursor.to_list(1) 
-    print(f'[+] {current_settings[0]['_id']}')
-
-    await database.settings.update_one(
-        {"_id": ObjectId(current_settings[0]['_id'])}, #settings_id
-        {'$set': json.loads(settings_json)})
-    # print('a')
+async def update_settings_in_db(new_settings_dict :dict):
+    current_setting = await get_setting_by_name(new_settings_dict["Nombre"])
+  
+    database.settings.update_one({"_id": ObjectId(current_setting["_id"])},{"$set":new_settings_dict})
+   
     updated_settings = await get_settings_from_db()
     updated_settings[0]['_id'] = str(updated_settings[0]['_id']) 
     return updated_settings
 
-async def get_settings_keys() -> list[str]:
+
+async def get_settings_names() -> list[str]:
+
     questions_in_db = await get_settings_from_db()
-    question_keys = [list(question.keys()) for  question in questions_in_db][0]
-    return question_keys
+    question_names = [question["Nombre"].lower() for question in questions_in_db]
+    return question_names
+
+
+async def get_setting_by_name(setting_name:str)->json:
+    setting = await database.settings.find_one({"Nombre": setting_name.capitalize()})
+    if setting is None:
+        raise HTTPException(status_code=404, detail="Setting not found")
+    setting['_id'] = str(setting['_id']) 
+    return setting
+
 
 async def count_question(question:str):
     question_splited = question.split()
-    settings_keys = await get_settings_keys()
-    settings_keys_set = set(settings_keys)
-    question_words = set(question_splited)
-    
-    if question_words & settings_keys_set:
-        print(question_words & settings_keys_set)
-        
+    question_splited_lowered = [question.lower() for question in question_splited]
+    settings_names = await get_settings_names()
 
-# async def sum_question_counter(word:str):
-#     settings_keys = await get_settings_keys()
-
-
-
-    
+    question_words = set(question_splited_lowered)
+    settings_names_set = set(settings_names)
+ 
+    if question_words & settings_names_set:
+        word = question_words & settings_names_set
+        lowered_word = list(word)[0].lower()
+        setting_obj = await get_setting_by_name(lowered_word)
+        if "fecha" in question_splited_lowered:
+            setting_obj["Contador_fecha"] += 1 
+            database.settings.update_one({'_id': ObjectId(setting_obj["_id"])},{'$set':{"Contador_fecha":setting_obj["Contador_fecha"]}})
+            return            
+        else:
+            print("[1]",setting_obj)
+            setting_obj["Contador"] += 1 
+            print("[2]",setting_obj["_id"])
+            database.settings.update_one({'_id': ObjectId(setting_obj["_id"])},{'$set':{"Contador":setting_obj["Contador"]}})
+            print("Done")
+            return
