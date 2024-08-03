@@ -7,10 +7,10 @@ from database.conn import database
 
 
 async def get_additional_info()->dict:
-    adional_info_cursor = database.additionalInfo.find()
-    adional_info = await adional_info_cursor.to_list(1) 
+    adional_info_cursor = database.additionalinfos.find()
+    adional_info = await adional_info_cursor.to_list(100) 
     for info in adional_info:
-        info['_id'] = str(info["_id"]) 
+        del info['_id']  
     return adional_info
 
 async def set_additional_info(additional_info: json):
@@ -22,7 +22,7 @@ async def get_settings_from_db() -> dict:
     settings_cursor = database.settings.find()
     settings = await settings_cursor.to_list(1000) 
     for setting in settings:
-        setting['_id'] = str(setting['_id'])
+        del setting['_id'] 
     return settings
 
 async def trucate_settings_from_db() -> dict:
@@ -77,9 +77,9 @@ async def count_question(question:str):
             database.settings.update_one({'_id': ObjectId(setting_obj["_id"])},{'$set':{"Contador_fecha":setting_obj["Contador_fecha"]}})
             return            
         else:
-            print("[1]",setting_obj)
+            # print("[1]",setting_obj)
             setting_obj["Contador"] += 1 
-            print("[2]",setting_obj["_id"])
+            # print("[2]",setting_obj["_id"])
             database.settings.update_one({'_id': ObjectId(setting_obj["_id"])},{'$set':{"Contador":setting_obj["Contador"]}})
-            print("Done")
+            # print("Done")
             return

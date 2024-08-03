@@ -77,7 +77,7 @@ async def get_settings():
 @app.post('/settings')
 async def post_settings(settings: Setting):
     settings_json = settings.json()
-    print(f"{settings_json}")  
+    # print(f"{settings_json}")  
     #trucates collection
     new_settings = await post_settings_to_db(settings_json)
     return new_settings
@@ -97,7 +97,7 @@ async def update_settings(settings: Setting):
 @app.post('/additional_info')
 async def set_addional_info_endpoint(additional_info:Additional_info):
     additional_info_json = additional_info.json()
-    print(additional_info_json)
+    # print(additional_info_json)
     current_additional_info = await set_additional_info(additional_info_json)
     return current_additional_info
 
@@ -129,7 +129,7 @@ async def chatbox_endpoint(websocket: WebSocket):
         if res:
             await count_question(data)
 
-        print(res)
+        # print(res)
         await websocket.send_text(f"[ChatBox] {res}")
 
 

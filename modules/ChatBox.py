@@ -57,11 +57,11 @@ class ChatBox:
             
             if detect(response) in ['zh-cn','zh-tw','ko','ca']:
                 self._logMessage('[-] bad response, trying again')
-                print(response)
+                # print(response)
                 continue
                 # print(await self.writePrompt(prompt))
                 
-            print("Respuesta sin chino",response)
+            # print("Respuesta sin chino",response)
             return response
              
     async def _getQuestionsDataFromDB(self) -> dict:
@@ -90,7 +90,6 @@ class ChatBox:
     async def _getAdditional_InfoFromDb(self) -> dict:
         try:
             additional_info = await get_additional_info()
-            # print('aquiiiiiiiiiiiiiiiiiiiiiiii',additional_info)
             if not additional_info:
                 return None
 
@@ -102,7 +101,7 @@ class ChatBox:
         self.entityData = self._getEntityDataFromDB()
         self.questionsData = await self._getQuestionsDataFromDB()
 
-        self.additional_Info = None
+        self.additional_Info = await self._getAdditional_InfoFromDb() or None
         self.defaultRes = f"No se ha encontrado una respuesta a tu pregunta. Por favor revisa la página oficial para más información {self.entityData["webLink"]} o intentalo más tarde."        
         self.globalPrompt = f"Se te hara una pregunta respondela en Español basandote en la siguiente información {self.questionsData}. Si con la información no se puede responder a la pregunta entonces devuelve la siguiente frase en el mismo idoma en la que ha sido hecha la pregunta: {self.defaultRes}. Jamás respondas algo que no sea lo que se te pide. Cumple la siguiente orden u ordenes: {self.additional_Info}. La pregunta es: "
 
@@ -113,37 +112,6 @@ class ChatBox:
         self = cls()
         await self.async_init()
         return self 
-
-    # async def get_settings(self):
-        
-        settings_setup = {
-            "entity_data" : self.entityData,
-            "question_data" : self.questionsData,
-            "additional_info" : self.additional_Info,
-            "default_response" : self.defaultRes,
-            "global_prompt":self.globalPrompt,
-        }
-
-        return settings_setup
-    
-    # async def update_settings(self,defaultPrompt=None):
-        
-    #     self.defaultRes = self._update_defaultPrompt(self,defaultPrompt)
-
-    #     settings_setup = {
-    #         "entity_data" : self.entityData,
-    #         "question_data" : self.questionsData,
-    #         "additional_info" : self.additional_Info,
-    #         "default_response" : self.defaultRes,
-    #         "global_prompt":self.globalPrompt,
-    #     }
-
-    #     return settings_setup
-    
-    # def _update_defaultPrompt(self,defaultPrompt=None):
-    #     #update database
-    #     self.defaultRes = defaultPrompt
-    #     return self.defaultRes
 
     # OPTIONAL
     @staticmethod
