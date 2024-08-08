@@ -31,7 +31,7 @@ html = """
     </div>
 
     <script>
-        const ws = new WebSocket("ws://cbapi-v3wc.onrender.com//chatbox");
+        const ws = new WebSocket("wss://cbapi-v3wc.onrender.com/chatbox");
 
         ws.onmessage = function(event) {
             const chatbox = document.getElementById('chatbox');
