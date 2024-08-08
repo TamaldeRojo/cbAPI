@@ -70,6 +70,7 @@ def index():
 async def get_settings():
     # await database.settings.insert_one({"uwu":"second_test"})
     settings = await get_settings_from_db()
+    print(settings)
     for setting in settings:
         setting['_id'] = str(setting['_id'])
     return settings
@@ -131,9 +132,5 @@ async def chatbox_endpoint(websocket: WebSocket):
             await count_question(data)
 
 
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
 
 
