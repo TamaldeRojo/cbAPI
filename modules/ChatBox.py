@@ -104,7 +104,7 @@ class ChatBox:
         self.questionsData = await self._getQuestionsDataFromDB()
 
         self.additional_Info = f"Traduce todo al idioma de la pregunta, incluyendo lo que ordene lo siguiente: {await self._getAdditional_InfoFromDb() or None}" 
-        self.defaultRes = f"No se ha encontrado una respuesta a tu pregunta. Por favor revisa la página oficial para más información {self.entityData["webLink"]} o intentalo más tarde."        
+        self.defaultRes = f'No se ha encontrado una respuesta a tu pregunta. Por favor revisa la página oficial para más información {self.entityData["webLink"]} o intentalo más tarde.'        
         self.globalPrompt = f"Se te haran varias preguntas responde basandote en la siguiente información {self.questionsData}. Si con la información no se puede responder a la pregunta entonces devuelve la siguiente frase : {self.defaultRes}. Jamás respondas algo que no sea lo que se te pide pero brinda mas informacion como fechas,costos,medios de entrega, etc. Cumple las siguientes ordenes: {self.additional_Info}."
 
         API_KEY = os.getenv('OPENAI_API_KEY')
