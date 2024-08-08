@@ -71,7 +71,7 @@ async def get_settings():
     # await database.settings.insert_one({"uwu":"second_test"})
     settings = await get_settings_from_db()
     for setting in settings:
-        setting["_id"] = str(setting["_id"])
+        setting['_id'] = str(setting['_id'])
     return settings
 
 @app.post('/settings')
