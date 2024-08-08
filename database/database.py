@@ -4,6 +4,8 @@ import time
 from bson import ObjectId
 from fastapi import HTTPException
 from database.conn import database
+from utils.log import log_message
+from utils.prompt import get_gpt_Response
 
 
 async def get_additional_info()->dict:
@@ -23,6 +25,8 @@ async def get_settings_from_db() -> dict:
     settings = await settings_cursor.to_list(1000) 
     for setting in settings:
         del setting['_id'] 
+        # del setting['__v']  
+
     return settings
 
 async def trucate_settings_from_db() -> dict:
@@ -53,7 +57,7 @@ async def get_settings_names() -> list[str]:
 
 
 async def get_setting_by_name(setting_name:str)->json:
-    setting = await database.settings.find_one({"Nombre": setting_name.capitalize()})
+    setting = await database.settings.find_one({"Nombre": setting_name})
     if setting is None:
         raise HTTPException(status_code=404, detail="Setting not found")
     setting['_id'] = str(setting['_id']) 
@@ -61,25 +65,36 @@ async def get_setting_by_name(setting_name:str)->json:
 
 
 async def count_question(question:str):
-    question_splited = question.split()
-    question_splited_lowered = [question.lower() for question in question_splited]
-    settings_names = await get_settings_names()
+    try:
+        settings_names = await get_settings_names()
 
-    question_words = set(question_splited_lowered)
-    settings_names_set = set(settings_names)
- 
-    if question_words & settings_names_set:
-        word = question_words & settings_names_set
-        lowered_word = list(word)[0].lower()
-        setting_obj = await get_setting_by_name(lowered_word)
-        if "fecha" in question_splited_lowered:
-            setting_obj["Contador_fecha"] += 1 
-            database.settings.update_one({'_id': ObjectId(setting_obj["_id"])},{'$set':{"Contador_fecha":setting_obj["Contador_fecha"]}})
-            return            
-        else:
-            # print("[1]",setting_obj)
-            setting_obj["Contador"] += 1 
-            # print("[2]",setting_obj["_id"])
-            database.settings.update_one({'_id': ObjectId(setting_obj["_id"])},{'$set':{"Contador":setting_obj["Contador"]}})
-            # print("Done")
-            return
+        context = """
+            Eres un validador el cual recibe una pregunta y una lista de nombres, si la pregunta busca algo relacionado sobre algun elemento de la lista de nombres responde (SIEMPRE EN ESPAÑOL) de la siguiente forma: Nombre;(palabra clave de que quiere saber, fecha, precio etc..); , de lo contrario responde con un 0 
+            """
+        prompt = f"pregunta : '{question}'. Lista de nombres: {settings_names}."
+        res = await get_gpt_Response(prompt,context)
+        print(res)
+        res_splited = res.split(";")
+
+
+        if res != "0":
+            print("a")
+            setting_obj = await get_setting_by_name(res_splited[0])
+            print(setting_obj)
+            
+            if res_splited[1] == "fecha":    
+                setting_obj["Contador_fecha"] += 1 
+                await database.settings.update_one({'_id': ObjectId(setting_obj["_id"])},{'$inc':{"Contador_fecha":setting_obj["Contador_fecha"]}})
+                log_message("Done")
+                return
+            else:
+                print("Pregunto por precio")
+                await database.settings.update_one({'_id': ObjectId(setting_obj["_id"])},{'$inc':{"Contador": 1}})
+                # setting_obj["Contador"] += 1 
+                log_message("Done")
+                return
+        return
+    
+    except Exception as e:
+        return
+  

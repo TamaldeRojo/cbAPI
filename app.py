@@ -120,17 +120,16 @@ async def askQuestion(question: str):
 @app.websocket("/chatbox")
 async def chatbox_endpoint(websocket: WebSocket):
     await websocket.accept()
+    chatbox = await ChatBox.start()
     while True:
-        chatbox = await ChatBox.start()
         data = await websocket.receive_text()
 
         await websocket.send_text(f"[You] {data}")
         res =  await chatbox.askQuestion(data)
         if res:
+            await websocket.send_text(f"[ChatBox] {res}")
             await count_question(data)
 
-        # print(res)
-        await websocket.send_text(f"[ChatBox] {res}")
 
 
 if __name__ == "__main__":

@@ -1,14 +1,19 @@
 import os
 import g4f
 from dotenv import load_dotenv
-# from openai import OpenAI
+from openai import OpenAI, api_key
 from unidecode import unidecode
 from database.database import get_additional_info, get_settings_from_db
 from langdetect import detect,detect_langs
+from dotenv import load_dotenv
+
+load_dotenv()
+MODEL = os.getenv('MODEL')
+
 
 class ChatBox:
     def __init__(self) -> None:
-
+        
         self.entityData = None  
         self.questionsData = None 
         self.additional_Info = None 
@@ -16,12 +21,14 @@ class ChatBox:
         self.defaultRes = None 
         self.globalPrompt = None
 
+        self.client = None
+
     async def askQuestion(self,question: str) -> str:
         self._logMessage("Asking Question...")
         if not type(question) == str:
             raise TypeError("[-] Question needs to be in string format")
         try:
-            prompt = self.globalPrompt + question   
+            prompt = question   
             self._logMessage(prompt)
             res = await self.writePrompt(prompt)
             return res
@@ -44,25 +51,20 @@ class ChatBox:
     async def writePrompt(self,prompt) -> str:
 
         while True:
-            response = g4f.ChatCompletion.create(
-            model=g4f.models.gpt_35_turbo,
-            messages=[{'role':'user','content':prompt}]
+            response = self.client.chat.completions.create(
+                model=MODEL,
+                temperature=0.5,
+                max_tokens=100,
+                messages=[
+                    {"role": "system", "content": self.globalPrompt},
+                    {"role":"user","content":prompt}
+                    ],
+                # stream=True,
             )
-            self._logMessage("Got response Successfully")
-            
-            self._logMessage(detect(response))
-            
-            if not response:
-                return await self.writePrompt(prompt)
-            
-            if detect(response) in ['zh-cn','zh-tw','ko','ca']:
-                self._logMessage('[-] bad response, trying again')
-                # print(response)
-                continue
-                # print(await self.writePrompt(prompt))
-                
-            # print("Respuesta sin chino",response)
-            return response
+            res = response.choices[0].message.content
+            print(res)
+            return res
+           
              
     async def _getQuestionsDataFromDB(self) -> dict:
         try:   
@@ -101,10 +103,13 @@ class ChatBox:
         self.entityData = self._getEntityDataFromDB()
         self.questionsData = await self._getQuestionsDataFromDB()
 
-        self.additional_Info = await self._getAdditional_InfoFromDb() or None
+        self.additional_Info = f"Traduce todo al idioma de la pregunta, incluyendo lo que ordene lo siguiente: {await self._getAdditional_InfoFromDb() or None}" 
         self.defaultRes = f"No se ha encontrado una respuesta a tu pregunta. Por favor revisa la página oficial para más información {self.entityData["webLink"]} o intentalo más tarde."        
-        self.globalPrompt = f"Se te hara una pregunta respondela en Español basandote en la siguiente información {self.questionsData}. Si con la información no se puede responder a la pregunta entonces devuelve la siguiente frase en el mismo idoma en la que ha sido hecha la pregunta: {self.defaultRes}. Jamás respondas algo que no sea lo que se te pide. Cumple la siguiente orden u ordenes: {self.additional_Info}. La pregunta es: "
+        self.globalPrompt = f"Se te haran varias preguntas responde basandote en la siguiente información {self.questionsData}. Si con la información no se puede responder a la pregunta entonces devuelve la siguiente frase : {self.defaultRes}. Jamás respondas algo que no sea lo que se te pide pero brinda mas informacion como fechas,costos,medios de entrega, etc. Cumple las siguientes ordenes: {self.additional_Info}."
 
+        API_KEY = os.getenv('OPENAI_API_KEY')
+        api_key = API_KEY
+        self.client = OpenAI()
         return self
     
     @classmethod
